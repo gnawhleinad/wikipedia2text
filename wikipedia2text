@@ -20,7 +20,7 @@ NAME
 
 SYNOPSIS
     `basename $0` [-BCnNoOpPsSuUQ] [-b prog] [-c patt] [-i patt] [-l lang]
-                   [-X browseroptions] query
+                   [-X browseroptions] [-D dumpoptions] query
     `basename $0` -o [-b prog] [-l lang] query
     `basename $0` [-h]
     `basename $0` -v|-r
@@ -48,6 +48,8 @@ SYNOPSIS
                  term.
     -X "options" pass through options to browser, e.g., "-width 180"
                  (warnings: must be in quotes; browser specific, not checked)
+    -D "options" pass through options to w3m dump, e.g., "-cols 180"
+                 (warnings: must be in quotes; w3m specific, not checked)
 
     Query can be any term to search for at Wikipedia. Special
     characters will be taken care of. Note that only one query term is
@@ -233,14 +235,14 @@ function summary() { #{{{1
 function print_sections() { #{{{1
   TMPFILE="/tmp/wiki-sections_$$.html"
   Command="curl -s -L ${URL} | grep '\(</\?html\)\|\(</\?body\)\|\(<h[12]\)' |
-    sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m -dump $TMPFILE | stripOutput && rm $TMPFILE"
+    sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m ${DUMPOPTIONS} -dump $TMPFILE | stripOutput && rm $TMPFILE"
   eval ${Command}
 }
 function print_section_detail() { #{{{1
   TMPFILE="/tmp/wiki-section_$$.html"
   Command="curl -s -L ${URL} |
     sed -n -e '/\(<\/\?html\)\|\(<\/\?body\)\|\(<h1\)/p' -e \"/^.*<h2.*$*/,/^.*<\/h2.*>/p\" |
-    sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m -dump $TMPFILE | stripOutput"
+    sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m ${DUMPOPTIONS} -dump $TMPFILE | stripOutput"
   if [ "${COLOR}" = "true" ]; then
     eval "${Command} | colorize"
   else
@@ -263,11 +265,12 @@ if [ -r ~/.`basename $0`rc ]; then
 fi
 
 # Process commandline parameters {{{1
-while getopts "BCdnNoOpPsStuvhrUQl:b:c:i:I:B:T:W:X:-help" ARGS
+while getopts "BCdnNoOpPsStuvhrUQl:b:c:i:I:B:T:W:X:D:-help" ARGS
   do
   case ${ARGS} in
     b) ABROWSER=${OPTARG} ;;
     d) DEBUG="true" ;;
+    D) DUMPOPTIONS=${OPTARG} ;;
     B) ABROWSER='' ;;
     c) IGNCASE="false";COLOR="true"; PATT=${OPTARG} ;;
     C) COLOR="true" ;;
