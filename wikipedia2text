@@ -19,7 +19,7 @@ NAME
     articles. The output will be printed to standard out.
 
 SYNOPSIS
-    `basename $0` [-BCnNoOpPsSuU] [-b prog] [-c patt] [-i patt] [-l lang]
+    `basename $0` [-BCnNoOpPsSuUQ] [-b prog] [-c patt] [-i patt] [-l lang]
                    [-X browseroptions] query
     `basename $0` -o [-b prog] [-l lang] query
     `basename $0` [-h]
@@ -31,7 +31,7 @@ SYNOPSIS
     -s  display only a summary  -S  display whole article
     -u  output the query URL    -U  open URL in browser
     -v  display version         -h  display help
-    -t  show available sections
+    -t  show available sections -Q  interpret query as the URL
 
     -r           open Random Page
     -d           debug mode
@@ -263,7 +263,7 @@ if [ -r ~/.`basename $0`rc ]; then
 fi
 
 # Process commandline parameters {{{1
-while getopts "BCdnNoOpPsStuvhrUl:b:c:i:I:B:T:W:X:-help" ARGS
+while getopts "BCdnNoOpPsStuvhrUQl:b:c:i:I:B:T:W:X:-help" ARGS
   do
   case ${ARGS} in
     b) ABROWSER=${OPTARG} ;;
@@ -280,6 +280,7 @@ while getopts "BCdnNoOpPsStuvhrUl:b:c:i:I:B:T:W:X:-help" ARGS
     O) USEBROWSER="false" ;;
     p) PAGER="true" ;;
     P) PAGER="false" ;;
+    Q) LITERAL="true" ;;
     r) RAND="true" ;;
     s) SHORT="true" ;;
     S) SHORT="false" ;;
@@ -311,6 +312,7 @@ IGNCASE=$(echo ${IGNCASE:="false"})
 PAGER=$(echo ${PAGER:="false"})
 OPENURL=$(echo ${OPENURL:="false"})
 RAND=$(echo ${RAND:="false"})
+LITERAL=$(echo ${LITERAL:="false"})
 
 if [ "$PAGER" = "true" ]; then
   { PAGER=$(which less) || PAGER=$(which more) ; } || errorExit "No Pager found!" ;
@@ -353,26 +355,30 @@ SECTION=$(echo ${SECTION:=""})
 # Output only the URL?
 OUTPUTURL=$(echo ${OUTPUTURL:="false"})
 
-# Now we do some input sanitizing. {{{1
-ARGUMENT="$(uri_decode "$*")"
-LOCAL="$(echo "${LOCAL}"|tr '[:upper:]' '[:lower:]')"
-# Random page?
-if [ "${RAND}" = "true" ]; then
-  ARGUMENT="$(uri_decode "${RANDOMP}")"
-fi
-if [ -z "${URL}" ]; then
-  URL="http://${LOCAL}.wikipedia.org/wiki/${ARGUMENT}"
-fi
+if [ "${LITERAL}" = "true" ]; then
+  URL="$1"
+else
+  # Now we do some input sanitizing. {{{1
+  ARGUMENT="$(uri_decode "$*")"
+  LOCAL="$(echo "${LOCAL}"|tr '[:upper:]' '[:lower:]')"
+  # Random page?
+  if [ "${RAND}" = "true" ]; then
+    ARGUMENT="$(uri_decode "${RANDOMP}")"
+  fi
+  if [ -z "${URL}" ]; then
+    URL="http://${LOCAL}.wikipedia.org/wiki/${ARGUMENT}"
+  fi
 
-if [ -n "${WURL}" ]; then
-  WURL="$(echo "${WURL%%/}")"
-  case "${WURL}" in
-    http://*) URL="${WURL}"/wiki/"${ARGUMENT}" ;;
-    *) URL="http://""${WURL}"/wiki/"${ARGUMENT}" ;;
-  esac;
-  # unset $LOCAL to force using an english-locale
-  # this is used to strip the tags [edit], eg.
-  LOCAL="en"
+  if [ -n "${WURL}" ]; then
+    WURL="$(echo "${WURL%%/}")"
+    case "${WURL}" in
+      http://*) URL="${WURL}"/wiki/"${ARGUMENT}" ;;
+      *) URL="http://""${WURL}"/wiki/"${ARGUMENT}" ;;
+    esac;
+    # unset $LOCAL to force using an english-locale
+    # this is used to strip the tags [edit], eg.
+    LOCAL="en"
+  fi
 fi
 
 # Debug mode? {{{1
