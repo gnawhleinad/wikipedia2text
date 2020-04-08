@@ -43,6 +43,7 @@ SYNOPSIS
                  de, en, eo, es, fi, fr, hu, ia, is, it, la, lb, nds, nl, nn,
                  no, pl, pt, rm, ro, simple, sk, sl, sv, tr)
     -T custom    print custom section (anything in html h2 tag)
+    -Y custom    print only the immediate custom section
     -W url       use url as base-URL for wikipedia (e.g. use a different
                  Wiki, Querying this URL will happen by appending the search
                  term.
@@ -240,9 +241,16 @@ function print_sections() { #{{{1
 }
 function print_section_detail() { #{{{1
   TMPFILE="/tmp/wiki-section_$$.html"
-  Command="curl -s -L ${URL} |
-    sed -n -e '/\(<\/\?html\)\|\(<\/\?body\)\|\(<h1\)/p' -e \"/^.*<h2.*$*/,/^.*<\/h2.*>/p\" |
-    sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m ${DUMPOPTIONS} -dump $TMPFILE | stripOutput"
+  if [ "${ONLYSECTION}" = "true" ]; then
+    Command="curl -s -L ${URL} |
+      sed -n -e '/\(<\/\?html\)\|\(<\/\?body\)\|\(<h1\)/p' -e \"/^.*<h2.*$*/,/^.*<\/h2.*>/p\" |
+      sed -e '1,/h[3-9]/!d' -e 's/<h[3-9].*$//' |
+      sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m ${DUMPOPTIONS} -dump $TMPFILE | stripOutput"
+  else
+    Command="curl -s -L ${URL} |
+      sed -n -e '/\(<\/\?html\)\|\(<\/\?body\)\|\(<h1\)/p' -e \"/^.*<h2.*$*/,/^.*<\/h2.*>/p\" |
+      sed -e 's/^.*<h2/<h2/' > $TMPFILE && w3m ${DUMPOPTIONS} -dump $TMPFILE | stripOutput"
+  fi
   if [ "${COLOR}" = "true" ]; then
     eval "${Command} | colorize"
   else
@@ -265,7 +273,7 @@ if [ -r ~/.`basename $0`rc ]; then
 fi
 
 # Process commandline parameters {{{1
-while getopts "BCdnNoOpPsStuvhrUQl:b:c:i:I:B:T:W:X:D:-help" ARGS
+while getopts "BCdnNoOpPsStuvhrUQl:b:c:i:I:B:T:Y:W:X:D:-help" ARGS
   do
   case ${ARGS} in
     b) ABROWSER=${OPTARG} ;;
@@ -289,6 +297,7 @@ while getopts "BCdnNoOpPsStuvhrUQl:b:c:i:I:B:T:W:X:D:-help" ARGS
     S) SHORT="false" ;;
     t) SECTION="show" ;;
     T) SECTION=$OPTARG ;;
+    Y) SECTION=$OPTARG; ONLYSECTION="true" ;;
     u) OUTPUTURL="true" ;;
     U) OPENURL="true";;
     v) getVersion; exit 0 ;;
@@ -354,6 +363,7 @@ SHORT=$(echo ${SHORT:="false"})
 
 # custom Section
 SECTION=$(echo ${SECTION:=""})
+ONLYSECTION=$(echo ${ONLYSECTION:="false"})
 
 # Output only the URL?
 OUTPUTURL=$(echo ${OUTPUTURL:="false"})
